@@ -26,17 +26,17 @@ children_expr:
 
 
 name_expr:
-  | n = NAME { Box (String.uppercase n) }
+  | n = NAME { Box (String.uppercase_ascii  n) }
   | SCENARIO { Scenario }
 ;
 
 box_expr:
   | PROCESS n = NAME EQ BOP par = parameters_expr proc = process_expr BCL SEMICOLON { let (start_c, stop_c) = par in
                                                                                       let (start_m, stop_m) = proc in
-                                                                                      Process ({parameters = {name = Box (String.uppercase n); start_cond = start_c; stop_cond = stop_c}; start_msg = start_m ; stop_msg = stop_m })
+                                                                                      Process ({parameters = {name = Box (String.uppercase_ascii  n); start_cond = start_c; stop_cond = stop_c}; start_msg = start_m ; stop_msg = stop_m })
                                                                                     }
   | BOX n = NAME EQ BOP par = parameters_expr c = children_expr BCL SEMICOLON { let (start_c, stop_c) = par in
-                                                                                Hierarchical ({parameters = {name = Box (String.uppercase n); start_cond = start_c; stop_cond = stop_c}; children = c})
+                                                                                Hierarchical ({parameters = {name = Box (String.uppercase_ascii  n); start_cond = start_c; stop_cond = stop_c}; children = c})
                                                                               }
 ;
 
