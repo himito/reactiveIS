@@ -1,0 +1,40 @@
+/**
+ * Example of an Interactive Score
+ * Author: Jaime Arias Almeida
+ **/
+
+// Texture A
+Texture a = {
+  _start.cond_ = Wait (Start (Scenario), 1, 1);
+  _stop.cond_  = Wait (Start (a), 2, 2);
+  _start.msg_  = "/light/1 on" ;
+  _stop.msg_   = "/light/1 off";
+};
+
+// Texture B
+Texture b = {
+  _start.cond_ = Wait (Start (Scenario), 3, 3);
+  _stop.cond_  = Wait (Start (b), 2, 2);
+  _start.msg_  = "/light/2 on";
+  _stop.msg_   = "/light/2 off";
+};
+
+// Structure C
+Structure c = {
+  _start.cond_ = (Wait (End (a), 5, 5) & Wait (End (b), 3, 3));
+  _stop.cond_  = (Wait (End (d), 0, INF) & Wait (End (e), 0, INF));
+  // Texture D
+  Texture d = {
+    _start.cond_ = ((Wait (Start (c), 2, 5) & Event ("/mouse 1")) | Wait (Start (c), 5, 5));
+    _stop.cond_  = Wait (Start (d), 1, 1);
+    _start.msg_  = "/sound/1 on";
+    _stop.msg_   = "/sound/1 off";
+  };
+  // Texture E
+  Texture e = {
+    _start.cond_ = Wait (Start (c), 1, 1);
+    _stop.cond_  = Wait (Start (e), 2, 2);
+    _start.msg_  = "/sound/2 on";
+    _stop.msg_   = "/sound/2 off";
+  };
+};

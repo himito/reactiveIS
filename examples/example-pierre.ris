@@ -1,0 +1,126 @@
+/**
+ * Scenario of Pierre Cochard written in ReactiveIS
+ * Author: Jaime Arias <jarias@labri.fr>
+ * Remarks: time-unit -> 1 us
+ *          /clickOn means that the user clicks on the trigger point at the start of the box
+ **/
+
+
+Texture FadeIn = {
+  _start.cond_ = Wait (Start (Scenario), 2752, 2752);
+  _stop.cond_  = Wait (Start (FadeIn), 12096, 12096);
+  _start.msg_  = "[/grn/audio/gain 0, /grn/playSel bang]";
+  _stop.msg_   = "/grn/audio/gain 100";
+};
+
+
+// Condition Mutual Exclusive : Grain and Rev
+Texture Grain = {
+  _start.cond_ = (Wait (End (FadeIn), 1664, INF) & Event ("/clickOn Grain"));
+  _stop.cond_  = Wait (Start (Grain), 8192, 8192);
+  _start.msg_  = "/grn/grainSize 400";
+  _stop.msg_   = "";
+};
+
+
+/**
+Texture Rev = {
+  _start.cond_ = Event ("/clickOn Rev");
+  _stop.cond_  = Wait (Start (Rev), 5760, 5760);
+  _start.msg_  = "/grn/grainSize -400";
+  _stop.msg_   = "";
+};
+**/
+
+
+Texture Pitch = {
+  _start.cond_ = Wait (Start (Scenario), 23104, 23104);
+  _stop.cond_  = Wait (Start (Pitch), 18176, 18176);
+  _start.msg_  = "/grn/grainPitch 0"; // check this
+  _stop.msg_   = "/grn/grainPitch 0"; // check this
+};
+
+
+// Condition Mutual Exclusive FreqShift and Chorus
+Texture FreqShift = {
+  _start.cond_ = (Wait (End (Pitch), 2944, INF) & Event ("/clickOn FreqShift"));
+  _stop.cond_  = Wait (Start (FreqShift), 15040, 15040);
+  _start.msg_  = "/fshift/audio/mix 0";
+  _stop.msg_   = "/fshift/audio/mix 100";
+};
+
+/**
+Texture Chorus = {
+  _start.cond_ = Event ("/clickOn Chorus");
+  _stop.cond_  = Wait (Start (Chorus), 15488, 15488);
+  _start.msg_  = "/chrs/audio/mix 0";
+  _stop.msg_   = "/chrs/audio/mix 100";
+};
+**/
+
+Texture NegSB = {
+  // condition /fshift/audio/mix >= 50
+  _start.cond_ = (Wait (End (Pitch), 2624, INF) & Event ("/fshift/audio/mix &gt;= 50"));
+  _stop.cond_  = Wait (Start (NegSB), 6592, 6592);
+  _start.msg_  = "/fshift/negS 1";
+  _stop.msg_   = "/fshift/negS ";
+};
+
+
+Texture GraphicsIn = {
+  // We could start GraphicsIn at the beginning of the execution (perhaps it is an error)
+  _start.cond_ = (Wait (Start (Scenario), 0, INF) & Event ("/clickOn GraphicsIn"));
+  _stop.cond_  = Wait (Start (GraphicsIn), 21120, 21120);
+  _start.msg_  = "[SuperCollider:/alpha 0, SuperCollider:/color 0, SuperCollider:/front 1, SuperCollider:/zoom 0.7]";
+  _stop.msg_   = "[SuperCollider:/alpha 1, SuperCollider:/color 1, SuperCollider:/zoom 2]";
+};
+
+
+Texture GraphicsOut = {
+  _start.cond_ = (Wait (End (GraphicsIn), 0, INF) & Event ("/clickOn GraphicsOut"));
+  _stop.cond_  = Wait (Start (GraphicsOut), 10112, 10112);
+  _start.msg_  = "[SuperCollider:/alpha 1, SuperCollider:/color 1, SuperCollider:/front 1, SuperCollider:/zoom 2]";
+  _stop.msg_   = "[SuperCollider:/alpha 0.5, SuperCollider:/color 0.2, SuperCollider:/zoom 0.5]";
+};
+
+
+Texture RdmCoeff = {
+  _start.cond_ = Wait (Start (Scenario), 68224, 68224);
+  _stop.cond_  = Wait (Start (RdmCoeff), 20352, 20352);
+  _start.msg_  = "[/grn/randCoeff 1538, /grn/randFreq 1]";
+  _stop.msg_   = "[/grn/randCoeff -1295, /grn/randFreq 0.01, /grn/selEnd 53262.066406, /grn/selStart 53262.066406]";
+};
+
+
+Texture SelChg = {
+  _start.cond_ = (Wait (End (RdmCoeff), 0, INF) & Event ("/clickOn SelChg"));
+  _stop.cond_  = Wait (Start (SelChg), 13248, 13248);
+  _start.msg_  = "[/grn/audio/gain 75.806198, /grn/playSel bang]";
+  _stop.msg_   = "[/grn/audio/gain 100]";
+};
+
+
+Texture BalOut = {
+  _start.cond_ = (Wait (End (RdmCoeff), 1920, INF) & Event ("/clickOn BalOut"));
+  _stop.cond_  = Wait (Start (BalOut), 19392, 19392);
+  _start.msg_  = "[/chrs/audio/mix ?, /fshift/audio/mix 100]"; // What does ? mean ?
+  _stop.msg_   = "[/chrs/audio/mix 0, /fshift/audio/mix 0]";
+};
+
+
+Texture FinalMod = {
+  _start.cond_ = (Wait (End (BalOut), 1344, INF) & Event ("/clickOn FinalMod"));
+  _stop.cond_  = Wait (Start (FinalMod), 19264, 19264);
+  _start.msg_  = "[/grn/grainSize ?, /grn/randFreq ?]";
+  _stop.msg_   = "[/grn/grainSize 200, /grn/randFreq 0.142]";
+};
+
+
+Texture FadeOut = {
+  // there is no relation betwen FinalMod and FadeOut, then we could execute FinalMod before FadeOut or at the beginning of the execution (perhaps an error!)
+  _start.cond_ = (Wait (Start (Scenario), 0, INF) & Event ("/clickOn FadeOut"));
+  _stop.cond_  = Wait (Start (FadeOut), 18624, 18624);
+  _start.msg_  = "/grn/audio/gain ?";
+  _stop.msg_   = "/grn/audio/gain 0";
+};
+
