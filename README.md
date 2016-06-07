@@ -11,6 +11,7 @@ We recommend to install the following dependencies using the package manager [op
 ```
 
 * Ocaml
+* Ocamlgraph
 * Ocamllex
 * Menhir
 
@@ -18,7 +19,7 @@ We recommend to install the following dependencies using the package manager [op
   * `make`
 
 ## Execution
-  * `./reactiveIS.native score.ris`
+  * `./reactiveIS.native examples/score.ris`
 
 ## Notes
   * Utils folder contains the necessary files for syntax highlighting.
