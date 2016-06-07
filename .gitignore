@@ -21,3 +21,7 @@ _build/
 # oasis generated files
 setup.data
 setup.log
+
+### ReactiveIS ###
+*.pdf
+*.dot
