@@ -1,0 +1,47 @@
+# [PackageDev] target_format: plist, ext: tmLanguage
+---
+name: ReactiveIS
+scopeName: source.ris
+fileTypes: [ris]
+uuid: 86bd6b97-3c91-4b0e-b66f-7eb175bcc5ea
+
+patterns:
+- name: comment.block.ris
+  begin: \/\*\*
+  end: \*\*\/
+
+- name: comment.line.ris
+  match: \/\/.*
+
+- name: entity.name.function.ris
+  match: (Wait|Event)
+
+- name: support.function.ris
+  match: (\&|\|)
+
+- name: string.quoted.double.ris
+  begin: \"
+  end: \"
+
+- name: constant.numeric.ris
+  match: (\d+(\.\d+)?|INF)
+
+
+- name: meta.ris
+  match: (Texture|Structure)\s+(\S+)\s*=\s*{
+  captures:
+    '1': {name: support.class.ris}
+    '2': {name: entity.name.tag.ris}
+
+- name: meta.ris
+  match: (_start\.cond_|_stop\.cond_|_start\.msg_|_stop\.msg_)\s*=
+  captures:
+    '1': {name: keyword.control.ris}
+
+- name: meta.ris
+  match: (Start|End)\s*\((\S*)\)
+  captures:
+    '1': {name: entity.name.function.ris}
+    '2': {name: entity.name.tag.ris}
+...
+
