@@ -7,3 +7,5 @@ B src/_build
 B src/_build/lib
 B src/_build/application
 B src/_build/parser
+
+PKG ocamlgraph

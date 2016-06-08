@@ -1,5 +1,10 @@
-(* The name of a box is a string *)
-type name = Box of string | Scenario
+open Graph
+
+(* Names of temporal objects *)
+type label = string
+
+(* Temporal objects send messages to external applications *)
+type msg = string
 
 (* Time is discrete *)
 type time = int
@@ -7,8 +12,74 @@ type time = int
 (* The duration of a box can be finite or infinite *)
 type duration = Finite of time | Infinite
 
-(* Processes send messages to external applications *)
-type msg = string
+(* A path is a string *)
+type path = label list
+
+(* Definition of a Condition System *)
+type condition_system =
+  | True
+  | WaitFromStart of path * time * duration
+  | WaitFromEnd of path * time * duration
+  | EndScenario
+  | WaitEvent of msg
+  | And of condition_system * condition_system
+  | Or of condition_system * condition_system
+
+(* information of a node*)
+type node_info = {label: label ;
+                  start_cond: condition_system ;
+                  stop_cond: condition_system;
+                  start_msg: msg option;
+                  stop_msg: msg option;
+                  }
+
+(* representation of a node -- must be hashable *)
+module V = struct
+  type t = node_info
+  let compare = Pervasives.compare
+  let hash = Hashtbl.hash
+  let equal = (=)
+end
+
+(* representation of an edge -- must be comparable *)
+module E = struct
+  type t = label
+  let compare = Pervasives.compare
+  let hash = Hashtbl.hash
+  let equal = (=)
+  let default = ""
+end
+
+(* a mutable directed graphs *)
+module P = Imperative.Digraph.ConcreteLabeled(V)(E)
+
+(* module for creating dot-files *)
+module DotProgram = Graphviz.Dot (struct
+    include P (* use the graph module from above *)
+
+    let graph_attributes _ = []
+    let default_vertex_attributes _ = []
+    let default_edge_attributes _ = []
+    let get_subgraph _ = None
+
+    let vertex_name v = v.label
+
+    let vertex_attributes _ = [`Shape `Box]
+
+    let edge_attributes (a, e, b) = [`Label e; `Color 4711]
+
+end)
+
+(* print the graph *)
+let dot_output g f =
+  let file = open_out f in
+  DotProgram.output_graph file g;
+  close_out file
+
+
+(* The name of a box is a string *)
+type name = Box of string | Scenario
+
 
 (* Boxes have two events, the start and the end *)
 type boxEvent = Start of name | End of name
@@ -18,6 +89,7 @@ type condition =
   | Event of msg                       (* An event was triggered *)
   | And of condition * condition       (* Conjunction of conditions *)
   | Or of condition * condition        (* Disjunction of conditions *)
+
 
 (* All boxes have a name, a start condition and a stop condition *)
 type params = {name: name; start_cond: condition; stop_cond: condition}
@@ -31,15 +103,40 @@ and hierarchical = {parameters: params; children: box list }
 
 type scenario = box list (* A scenario is a list of hierarchical or process boxes*)
 
-(* A path is a string*)
-type path = name list
+(* Return the name of the box as string *)
+let name2str n =
+  match n with
+  | Box s -> s
+  | Scenario -> ""
 
-(* Definition of a Condition System *)
-type conditionSystem =
-  | True
-  | WaitFromStart of path * time * duration
-  | WaitFromEnd of path * time * duration
-  | EndScenario
-  | WaitEvent of msg
-  | AndCS of conditionSystem * conditionSystem
-  | OrCS of conditionSystem * conditionSystem
+(* Function that prints the scenario *)
+let print_scenario s =
+  let rec print_box b l =
+    match b with
+    | Process p -> name2str p.parameters.name
+    | Hierarchical h -> name2str h.parameters.name ^ (
+        List.fold_left
+          (fun acc b -> ("\n"^(String.make l ' ')^"- "^print_box b (l+1))^acc)
+          "" h.children
+        )
+  in
+  print_endline (String.concat "\n" (
+    List.fold_left (fun acc b -> ("- "^print_box b 1)::acc) [] s
+  ))
+
+(* Return the duration of a box as a string *)
+let duration2str d =
+  match d with
+  | Finite i -> string_of_int i
+  | Infinite -> "∞"
+
+(* Return a condition as a string *)
+let rec condition2str c =
+  match c with
+  | True -> "True"
+  | EndScenario -> "EndScenario"
+  | WaitEvent m -> "WaitEvent ("^m^")"
+  | And (c1,c2) -> "("^(condition2str c1)^" & "^(condition2str c2)^")"
+  | Or (c1, c2) -> "("^(condition2str c1)^" | "^(condition2str c2)^")"
+  | WaitFromStart (p,s,e) -> "WaitFromStart ("^ (String.concat "." p) ^", "^(string_of_int s)^", "^(duration2str e)
+  | WaitFromEnd (p,s,e) -> "WaitFromEnd ("^ (String.concat "." p) ^", "^(string_of_int s)^", "^(duration2str e)
