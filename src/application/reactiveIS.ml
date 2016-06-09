@@ -22,14 +22,14 @@ let program_root_node = { label      = "_";
 let program_box_node b =
   match b with
   | Process p -> {label      = name2str p.parameters.name;
-                  start_cond = True;
-                  stop_cond  = EndScenario;
+                  start_cond = parse_condition p.parameters.start_cond;
+                  stop_cond  = parse_condition p.parameters.stop_cond;
                   start_msg  = Some p.start_msg;
                   stop_msg   = Some p.stop_msg}
 
   | Hierarchical h -> { label      = name2str h.parameters.name;
-                        start_cond = True;
-                        stop_cond  = EndScenario;
+                        start_cond = parse_condition h.parameters.start_cond;
+                        stop_cond  = parse_condition h.parameters.stop_cond;
                         start_msg  = None;
                         stop_msg   = None}
 
@@ -52,8 +52,7 @@ let create_program_tree s =
   let root_node = P.V.create program_root_node in
   let lv, le = List.split (vertices_edges root_node s) in
 
-  P.add_vertex g root_node;
-  List.iter (P.add_vertex g) lv;
+  List.iter (P.add_vertex g) (root_node::lv);
   List.iter (P.add_edge_e g) le;
 
   dot_output g "program_tree.dot";

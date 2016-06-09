@@ -80,6 +80,11 @@ let dot_output g f =
 (* The name of a box is a string *)
 type name = Box of string | Scenario
 
+(* Return the name of the box as string *)
+let name2str n =
+  match n with
+  | Box s -> s
+  | Scenario -> ""
 
 (* Boxes have two events, the start and the end *)
 type boxEvent = Start of name | End of name
@@ -89,6 +94,19 @@ type condition =
   | Event of msg                       (* An event was triggered *)
   | And of condition * condition       (* Conjunction of conditions *)
   | Or of condition * condition        (* Disjunction of conditions *)
+
+
+let rec parse_condition c =
+  match c with
+  | Wait (b, t, d) ->
+    begin
+      match b with
+      | Start n -> WaitFromStart ([name2str n], t, d)
+      | End n -> WaitFromEnd ([name2str n], t, d)
+    end
+  | Event m -> WaitEvent m
+  | And (c1, c2) -> And (parse_condition c1, parse_condition c2)
+  | Or (c1, c2) -> Or (parse_condition c1, parse_condition c2)
 
 
 (* All boxes have a name, a start condition and a stop condition *)
@@ -102,12 +120,6 @@ and proc = {parameters: params; start_msg: msg; stop_msg: msg}
 and hierarchical = {parameters: params; children: box list }
 
 type scenario = box list (* A scenario is a list of hierarchical or process boxes*)
-
-(* Return the name of the box as string *)
-let name2str n =
-  match n with
-  | Box s -> s
-  | Scenario -> ""
 
 (* Function that prints the scenario *)
 let print_scenario s =
