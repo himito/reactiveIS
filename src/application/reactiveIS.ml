@@ -75,13 +75,36 @@ let create_state_tree size_p =
   Hashtbl.add nodes root_node.label_s root_node;
   (nodes, g)
 
+(* Translate a list-like path into a string-like path *)
+let get_hash_path p =
+  String.concat "." p
+
 (* Stopping a TO *)
 let stop s ns p t =
-  let vertex = Hashtbl.find ns p in
-  S.iter_succ
-    (fun v -> if v.stop_time == None then v.stop_time <- Some t)
-    s vertex;
-  vertex.stop_time <- Some t
+  let path = get_hash_path p in
+  let vertex = Hashtbl.find ns path in
+  if vertex.stop_time == None then
+    S.iter_succ
+      (fun v -> if v.stop_time == None then v.stop_time <- Some t)
+      s vertex;
+    vertex.stop_time <- Some t
+
+
+(* Starting a TO *)
+let start s ns p t =
+  let rev_p = List.rev p in
+  let new_name = List.hd rev_p in        (* name of the new box - funciton up *)
+  let path = get_hash_path (List.rev (List.tl rev_p)) in (* path of the parent - function last*)
+  let new_node = S.V.create {label_s = new_name;
+                              start_time = t;
+                              stop_time = None} in
+  let new_edge = S.E.create (Hashtbl.find ns path) new_name new_node in
+  S.add_vertex s new_node;
+  S.add_edge_e s new_edge;
+  Hashtbl.add ns (get_hash_path p) new_node
+
+
+
 
 
 let str_state_node n =
@@ -96,15 +119,10 @@ let _ =
   let (nodes_g, g) = create_program_tree scenario in
   let (nodes_s, s) = create_state_tree (Hashtbl.length nodes_g) in
 
-  let state_A = S.V.create {label_s    = "A";
-                            start_time = 0;
-                            stop_time  = None} in
-  S.add_vertex s state_A;
-  S.add_edge_e s (S.E.create (Hashtbl.find nodes_s "_") "A" state_A);
-  Hashtbl.add nodes_s "_.A" state_A;
 
-  stop s nodes_s "_" 20;
+  start s nodes_s ["_"; "C"] 2;
+  stop s nodes_s ["_"; "C"] 20;
 
-  print_endline ("Find_Vertex:\n"^(str_state_node (Hashtbl.find nodes_s "_.A")));
+  print_endline ("Find_Vertex:\n"^(str_state_node (Hashtbl.find nodes_s "_.C")));
   dot_output DotProgram.output_graph g "program_tree.dot";
   dot_output DotState.output_graph s "state_tree.dot"
