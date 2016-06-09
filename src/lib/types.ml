@@ -25,24 +25,24 @@ type condition_system =
   | And of condition_system * condition_system
   | Or of condition_system * condition_system
 
-(* information of a node*)
-type node_info = {label: label ;
-                  start_cond: condition_system ;
-                  stop_cond: condition_system;
-                  start_msg: msg option;
-                  stop_msg: msg option;
-                  }
+(* information of a node program *)
+type program_node_info = {label_p: label ;
+                          start_cond: condition_system ;
+                          stop_cond: condition_system;
+                          start_msg: msg option;
+                          stop_msg: msg option;
+                          }
 
-(* representation of a node -- must be hashable *)
-module V = struct
-  type t = node_info
+(* representation of a node in the program tree -- must be hashable *)
+module ProgramVertex = struct
+  type t = program_node_info
   let compare = Pervasives.compare
   let hash = Hashtbl.hash
   let equal = (=)
 end
 
-(* representation of an edge -- must be comparable *)
-module E = struct
+(* representation of an edge in the program tree -- must be comparable *)
+module ProgramEdge = struct
   type t = label
   let compare = Pervasives.compare
   let hash = Hashtbl.hash
@@ -50,8 +50,8 @@ module E = struct
   let default = ""
 end
 
-(* a mutable directed graphs *)
-module P = Imperative.Digraph.ConcreteLabeled(V)(E)
+(* A program tree is a mutable directed graphs *)
+module P = Imperative.Digraph.ConcreteLabeled(ProgramVertex)(ProgramEdge)
 
 (* module for creating dot-files *)
 module DotProgram = Graphviz.Dot (struct
@@ -62,7 +62,7 @@ module DotProgram = Graphviz.Dot (struct
     let default_edge_attributes _ = []
     let get_subgraph _ = None
 
-    let vertex_name v = v.label
+    let vertex_name v = v.label_p
 
     let vertex_attributes _ = [`Shape `Box]
 
@@ -71,10 +71,60 @@ module DotProgram = Graphviz.Dot (struct
 end)
 
 (* print the graph *)
-let dot_output g f =
+let dot_output output g f=
   let file = open_out f in
-  DotProgram.output_graph file g;
+  output file g;
   close_out file
+
+
+(* information of a state node *)
+type state_node_info = {label_s: label ;
+                        mutable start_time: time ;
+                        mutable stop_time: time option;
+                        }
+
+
+let time2str v =
+  match v with
+  | Some t -> string_of_int t
+  | None -> "undefined"
+
+(* representation of a node in the state tree -- must be hashable *)
+module StateVertex = struct
+  type t = state_node_info
+  let compare = Pervasives.compare
+  let hash = Hashtbl.hash
+  let equal = (=)
+end
+
+(* representation of an edge in the state tree -- must be comparable *)
+module StateEdge = struct
+  type t = label
+  let compare = Pervasives.compare
+  let hash = Hashtbl.hash
+  let equal = (=)
+  let default = ""
+end
+
+(* A state tree is a mutable directed graphs *)
+module S = Imperative.Digraph.ConcreteLabeled(StateVertex)(StateEdge)
+
+(* module for creating dot-files *)
+module DotState = Graphviz.Dot (struct
+    include S (* use the graph module from above *)
+
+    let graph_attributes _ = []
+    let default_vertex_attributes _ = []
+    let default_edge_attributes _ = []
+    let get_subgraph _ = None
+
+    let vertex_name v = v.label_s
+
+    let vertex_attributes _ = [`Shape `Box]
+
+    let edge_attributes (a, e, b) = [`Label e; `Color 4711]
+
+end)
 
 
 (* The name of a box is a string *)
