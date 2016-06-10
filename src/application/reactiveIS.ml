@@ -63,7 +63,7 @@ let create_program_tree s =
 
 (* Creation of the root node of the program tree *)
 let state_root_node = { label_s    = "_";
-                        start_time = 0;
+                        start_time = 0.0;
                         stop_time  = None}
 
 (* Create the initial state tree *)
@@ -145,18 +145,50 @@ let can_stop = alive
 (* Show the information of a state node *)
 let str_state_node n =
   String.concat "\n" ["label: "^(n.label_s);
-                      "start time: "^(string_of_int n.start_time);
-                      "stop time: "^(time2str n.stop_time)]
+                      "start time: "^(string_of_float n.start_time);
+                      "stop time: "^(string_of_float (get_time n.stop_time))]
 
+
+(* Returns the node of a path *)
+let target_node nodes_t p = Hashtbl.find nodes_t (get_hash_path p)
+
+(* Returns the root node of a tree*)
+let get_root_node nodes_t = target_node nodes_t [| "_" |]
+
+
+(* function of entailment, TODO: Create modules for (p,np) and (s,ns) *)
+let rec entailment p np s ns i t c =
+  match c with
+  | True -> true
+  | WaitFromStart (path, t1, t2) ->
+                          let n = target_node ns path in
+                          let t_r = t -. n.start_time in
+                          (t_r >= t1) && (t_r <= t2)
+  | WaitFromEnd (path, t1, t2) ->
+                          let n = target_node ns path in
+                          if (n.stop_time <> None)
+                          then
+                            let t_r = t -. (get_time n.stop_time) in
+                                (t_r >= t1) && (t_r <= t2)
+                          else false
+  | EndScenario -> S.fold_vertex
+                    (fun v acc ->
+                      if List.length (S.pred s v) > 0  (* node different to the root *)
+                      then acc && (v.stop_time <> None)
+                      else acc)
+                    s true
+  | WaitEvent m -> List.mem m i
+  | And (c1, c2) -> (entailment p np s ns i t c1) && (entailment p np s ns i t c2)
+  | Or (c1, c2) -> (entailment p np s ns i t c1) || (entailment p np s ns i t c2)
 
 let _ =
   let scenario = process_of_file in
   let (nodes_g, g) = create_program_tree scenario in
   let (nodes_s, s) = create_state_tree (Hashtbl.length nodes_g) in
 
-  start s nodes_s [| "_"; "C" |] 2;
-  start s nodes_s [| "_"; "C"; "E" |] 10;
-  stop s nodes_s [| "_";"C";"E" |] 20;
+  start s nodes_s [| "_"; "C" |] 2.0;
+  start s nodes_s [| "_"; "C"; "E" |] 10.0;
+  stop s nodes_s [| "_";"C";"E" |] 20.0;
 
   (* List.iter (fun v -> print_endline (String.concat "." (Array.to_list v))) (alive nodes_s); *)
 
@@ -166,6 +198,11 @@ let _ =
   print_endline "Can Stop:";
   List.iter (fun v -> print_endline (String.concat "." (Array.to_list v))) (can_stop nodes_s);
 
+
+  print_endline "Satify Condition:";
+  let node_a = target_node nodes_g [| "_"; "A" |] in
+  print_endline (condition2str node_a.start_cond);
+  print_endline (string_of_bool (entailment g nodes_g s nodes_s [] 2.0 node_a.start_cond));
 
 (*   print_endline ("Find_Vertex:\n"^(str_state_node (Hashtbl.find nodes_s "_.C.E"))); *)
   dot_output DotProgram.output_graph g "program_tree.dot";

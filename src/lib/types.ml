@@ -7,10 +7,10 @@ type label = string
 type msg = string
 
 (* Time is discrete *)
-type time = int
+type time = float
 
 (* The duration of a box can be finite or infinite *)
-type duration = Finite of time | Infinite
+type duration = Finite of int | Infinite
 
 (* A path is an array of string *)
 type path = label array
@@ -21,8 +21,8 @@ let get_array_path p = Array.of_list (Str.split (Str.regexp "\\.") p)
 (* Definition of a Condition System *)
 type condition_system =
   | True
-  | WaitFromStart of path * time * duration
-  | WaitFromEnd of path * time * duration
+  | WaitFromStart of path * time * time
+  | WaitFromEnd of path * time * time
   | EndScenario
   | WaitEvent of msg
   | And of condition_system * condition_system
@@ -87,10 +87,16 @@ type state_node_info = {label_s: label ;
                         }
 
 
-let time2str v =
+let duration2time d =
+  match d with
+  | Finite t -> float_of_int t
+  | Infinite -> infinity
+
+
+let get_time v =
   match v with
-  | Some t -> string_of_int t
-  | None -> "undefined"
+  | Some t -> t
+  | None -> -1.0
 
 (* representation of a node in the state tree -- must be hashable *)
 module StateVertex = struct
@@ -142,20 +148,22 @@ let name2str n =
 (* Boxes have two events, the start and the end *)
 type boxEvent = Start of name | End of name
 
+(* TODO: The box name must be also a path !!! *)
 type condition =
-  | Wait of boxEvent * time * duration (* An event happened at a specific time interval *)
+  | Wait of boxEvent * int * duration (* An event happened at a specific time interval *)
   | Event of msg                       (* An event was triggered *)
   | And of condition * condition       (* Conjunction of conditions *)
   | Or of condition * condition        (* Disjunction of conditions *)
 
 
+(* TODO: Modify the path *)
 let rec parse_condition c =
   match c with
   | Wait (b, t, d) ->
     begin
       match b with
-      | Start n -> WaitFromStart (get_array_path (name2str n), t, d)
-      | End n -> WaitFromEnd (get_array_path (name2str n), t, d)
+      | Start n -> WaitFromStart (get_array_path ("_."^name2str n), float_of_int t, duration2time d)
+      | End n -> WaitFromEnd (get_array_path ("_."^name2str n), float_of_int t, duration2time d)
     end
   | Event m -> WaitEvent m
   | And (c1, c2) -> And (parse_condition c1, parse_condition c2)
@@ -191,9 +199,12 @@ let print_scenario s =
 
 (* Return the duration of a box as a string *)
 let duration2str d =
-  match d with
+  if d == infinity
+  then "∞"
+  else  string_of_float d
+(*   match d with
   | Finite i -> string_of_int i
-  | Infinite -> "∞"
+  | Infinite -> "∞" *)
 
 (* Return a condition as a string *)
 let rec condition2str c =
@@ -203,5 +214,5 @@ let rec condition2str c =
   | WaitEvent m -> "WaitEvent ("^m^")"
   | And (c1,c2) -> "("^(condition2str c1)^" & "^(condition2str c2)^")"
   | Or (c1, c2) -> "("^(condition2str c1)^" | "^(condition2str c2)^")"
-  | WaitFromStart (p,s,e) -> "WaitFromStart ("^ (String.concat "." (Array.to_list p)) ^", "^(string_of_int s)^", "^(duration2str e)
-  | WaitFromEnd (p,s,e) -> "WaitFromEnd ("^ (String.concat "." (Array.to_list p)) ^", "^(string_of_int s)^", "^(duration2str e)
+  | WaitFromStart (p,s,e) -> "WaitFromStart ("^ (String.concat "." (Array.to_list p)) ^", "^(string_of_float s)^", "^(duration2str e)^")"
+  | WaitFromEnd (p,s,e) -> "WaitFromEnd ("^ (String.concat "." (Array.to_list p)) ^", "^(string_of_float s)^", "^(duration2str e)^")"
