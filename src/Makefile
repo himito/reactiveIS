@@ -1,7 +1,7 @@
 OCAMLC=ocamlc
 OCAMLBUILD= ocamlbuild -classic-display \
 						-use-menhir -menhir "menhir -v --external-tokens Lexer" \
-						-use-ocamlfind -package ocamlgraph -package unix
+						-use-ocamlfind -package ocamlgraph -package unix -package str
 
 FLAGS=-Is application,lib,parser
 

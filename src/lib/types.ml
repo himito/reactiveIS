@@ -12,8 +12,11 @@ type time = int
 (* The duration of a box can be finite or infinite *)
 type duration = Finite of time | Infinite
 
-(* A path is a string *)
-type path = label list
+(* A path is an array of string *)
+type path = label array
+
+(* Translate a string-like path into a list-like path *)
+let get_array_path p = Array.of_list (Str.split (Str.regexp "\\.") p)
 
 (* Definition of a Condition System *)
 type condition_system =
@@ -151,8 +154,8 @@ let rec parse_condition c =
   | Wait (b, t, d) ->
     begin
       match b with
-      | Start n -> WaitFromStart ([name2str n], t, d)
-      | End n -> WaitFromEnd ([name2str n], t, d)
+      | Start n -> WaitFromStart (get_array_path (name2str n), t, d)
+      | End n -> WaitFromEnd (get_array_path (name2str n), t, d)
     end
   | Event m -> WaitEvent m
   | And (c1, c2) -> And (parse_condition c1, parse_condition c2)
@@ -200,5 +203,5 @@ let rec condition2str c =
   | WaitEvent m -> "WaitEvent ("^m^")"
   | And (c1,c2) -> "("^(condition2str c1)^" & "^(condition2str c2)^")"
   | Or (c1, c2) -> "("^(condition2str c1)^" | "^(condition2str c2)^")"
-  | WaitFromStart (p,s,e) -> "WaitFromStart ("^ (String.concat "." p) ^", "^(string_of_int s)^", "^(duration2str e)
-  | WaitFromEnd (p,s,e) -> "WaitFromEnd ("^ (String.concat "." p) ^", "^(string_of_int s)^", "^(duration2str e)
+  | WaitFromStart (p,s,e) -> "WaitFromStart ("^ (String.concat "." (Array.to_list p)) ^", "^(string_of_int s)^", "^(duration2str e)
+  | WaitFromEnd (p,s,e) -> "WaitFromEnd ("^ (String.concat "." (Array.to_list p)) ^", "^(string_of_int s)^", "^(duration2str e)

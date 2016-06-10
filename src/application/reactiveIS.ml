@@ -77,36 +77,72 @@ let create_state_tree size_p =
 
 (* Translate a list-like path into a string-like path *)
 let get_hash_path p =
-  String.concat "." p
+  String.concat "." (Array.to_list p)
+
+(* Exception indicating that the path does not exist *)
+exception PathNoExists
 
 (* Stopping a TO *)
 let stop s ns p t =
+  let rec apply_children v =
+    if v.stop_time == None then
+      S.iter_succ (fun c -> apply_children c) s v;
+      v.stop_time <- Some t
+  in
   let path = get_hash_path p in
-  let vertex = Hashtbl.find ns path in
-  if vertex.stop_time == None then
-    S.iter_succ
-      (fun v -> if v.stop_time == None then v.stop_time <- Some t)
-      s vertex;
-    vertex.stop_time <- Some t
+  if Hashtbl.mem ns path then
+    let vertex = Hashtbl.find ns path in
+      apply_children vertex
+  else raise PathNoExists
 
 
-(* Starting a TO *)
+let up p = Array.sub p 0 ((Array.length p) - 1)
+
+(* Starting a TO. TODO: Change p \in L(S) by up(p) \in L(S) *)
 let start s ns p t =
-  let rev_p = List.rev p in
-  let new_name = List.hd rev_p in        (* name of the new box - funciton up *)
-  let path = get_hash_path (List.rev (List.tl rev_p)) in (* path of the parent - function last*)
-  let new_node = S.V.create {label_s = new_name;
-                              start_time = t;
-                              stop_time = None} in
-  let new_edge = S.E.create (Hashtbl.find ns path) new_name new_node in
-  S.add_vertex s new_node;
-  S.add_edge_e s new_edge;
-  Hashtbl.add ns (get_hash_path p) new_node
+  let pos_array = (Array.length p) - 1 in
+  let new_name = Array.get p pos_array  in        (* name of the new box - funciton up *)
+  let path = get_hash_path (Array.sub p 0 pos_array) in (* path of the parent - function last*)
+  if Hashtbl.mem ns path then
+    let new_node = S.V.create {label_s = new_name;
+                                start_time = t;
+                                stop_time = None} in
+    let new_edge = S.E.create (Hashtbl.find ns path) new_name new_node in
+    S.add_vertex s new_node;
+    S.add_edge_e s new_edge;
+    Hashtbl.add ns (get_hash_path p) new_node
+  else raise PathNoExists
 
 
+(* Return the paths of the nodes that are currently running *)
+let alive ns =  Hashtbl.fold
+                (fun p v acc ->
+                  if v.stop_time == None then
+                    (get_array_path p)::acc
+                  else acc)
+                ns []
+
+(* Return the children of the node reached by a path *)
+let children nodes_t path =
+  if Hashtbl.mem nodes_t (get_hash_path path) then
+    Hashtbl.fold
+      (fun p n acc -> let path_child = (get_array_path p) in
+                      if (up path_child) = path then path_child :: acc else acc)
+      nodes_t []
+  else raise PathNoExists
 
 
+(* Computes the path of the boxes that can start *)
+let can_start np ns =
+  List.filter
+    (fun p -> not (Hashtbl.mem ns (get_hash_path p)))
+    (List.concat (List.map (children np) (alive ns)))
 
+(* Computes the path of the boxes that can stop *)
+let can_stop = alive
+
+
+(* Show the information of a state node *)
 let str_state_node n =
   String.concat "\n" ["label: "^(n.label_s);
                       "start time: "^(string_of_int n.start_time);
@@ -115,14 +151,22 @@ let str_state_node n =
 
 let _ =
   let scenario = process_of_file in
-  let _ = print_scenario scenario in
   let (nodes_g, g) = create_program_tree scenario in
   let (nodes_s, s) = create_state_tree (Hashtbl.length nodes_g) in
 
+  start s nodes_s [| "_"; "C" |] 2;
+  start s nodes_s [| "_"; "C"; "E" |] 10;
+  stop s nodes_s [| "_";"C";"E" |] 20;
 
-  start s nodes_s ["_"; "C"] 2;
-  stop s nodes_s ["_"; "C"] 20;
+  (* List.iter (fun v -> print_endline (String.concat "." (Array.to_list v))) (alive nodes_s); *)
 
-  print_endline ("Find_Vertex:\n"^(str_state_node (Hashtbl.find nodes_s "_.C")));
+  print_endline "Can Start:";
+  List.iter (fun v -> print_endline (String.concat "." (Array.to_list v))) (can_start nodes_g nodes_s);
+
+  print_endline "Can Stop:";
+  List.iter (fun v -> print_endline (String.concat "." (Array.to_list v))) (can_stop nodes_s);
+
+
+(*   print_endline ("Find_Vertex:\n"^(str_state_node (Hashtbl.find nodes_s "_.C.E"))); *)
   dot_output DotProgram.output_graph g "program_tree.dot";
   dot_output DotState.output_graph s "state_tree.dot"
